@@ -7,7 +7,7 @@ from stt import convert_speech_to_text
 app = Flask(__name__)  # *2
 
 # Setup logging
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.DEBUG,#logging.DEBUG,
                     format='%(asctime)s %(levelname)s %(message)s',
                     handlers=[
                         logging.FileHandler("app.log"),  # *3
