@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">  <!-- *1 -->
+    <title>Amigo Voice - Chat</title>
+    
+</head>
+
+<body>
+    <div class="theme-switcher">
+        <input type="checkbox" class="checkbox" id="checkbox">
+        <label for="checkbox" class="checkbox-label">
+            <i class="fas fa-moon"></i>
+            <i class="fas fa-sun"></i>
+            <span class="ball"></span>
+        </label>
+    </div>
+    <div class="container">
+        <h2>Chat</h2>
+    <canvas id="visualizer"></canvas>
+    <div id="loading">
+        <p>Loading&hellip;</p>
+        <p class='msg'>- Initializing -</p>
+    </div>
+    <div id="no-audio">
+        <h1>No Web Audio API</h1>
+        <p>Sorry, this experiment requires the Web Audio API.</p>
+        <a href='http://caniuse.com/#feat=audio-api' target='_blank'>See browser support</a>
+    </div>
+    <div id="chat-response"></div>
+    <script src="{{ url_for('static', filename='visualizer.js') }}"></script>
+    <script>
+        // Initialize Audio Context and Analyser Node
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)(); // Visualizer Integration
+        let audioBufferSourceNode; // Visualizer Integration
+        let analyser = audioContext.createAnalyser(); // Visualizer Integration
+
+        // Function to play audio using the decoded audio buffer
+        function playAudio(arrayBuffer) { // Visualizer Integration
+            audioContext.decodeAudioData(arrayBuffer, (buffer) => { // Visualizer Integration
+                if (audioBufferSourceNode) {
+                    audioBufferSourceNode.stop(); // Stop any previous audio
+                }
+                audioBufferSourceNode = audioContext.createBufferSource(); // Visualizer Integration
+                audioBufferSourceNode.buffer = buffer; // Visualizer Integration
+                audioBufferSourceNode.connect(analyser); // Connect source to analyser for visualization
+                analyser.connect(audioContext.destination); // Visualizer Integration
+                audioBufferSourceNode.start(); // Visualizer Integrationx
+                initializeVisualizer(); // Start visualizer
+            }, (error) => {
+                console.error('Error decoding audio:', error);
+            });
+        }
+
+        // Function to initialize and draw the visualizer
+        function initializeVisualizer() { // Visualizer Integration
+            const canvas = document.getElementById('visualizer'); // Visualizer Integration
+            const ctx = canvas.getContext('2d'); // Visualizer Integration
+            analyser.fftSize = 2048; // Visualizer Integration
+            const bufferLength = analyser.frequencyBinCount; // Visualizer Integration
+            const dataArray = new Uint8Array(bufferLength); // Visualizer Integration
+
+            function draw() { // Visualizer Integration
+                requestAnimationFrame(draw); // Visualizer Integration
+                analyser.getByteFrequencyData(dataArray); // Visualizer Integration
+
+                ctx.fillStyle = 'rgb(0, 0, 0)'; // Clear canvas
+                ctx.fillRect(0, 0, canvas.width, canvas.height); // Clear canvas
+
+                const barWidth = (canvas.width / bufferLength) * 2.5; // Visualizer Integration
+                let barHeight;
+                let x = 0;
+
+                for(let i = 0; i < bufferLength; i++) {
+                    barHeight = dataArray[i]; // Visualizer Integration
+                    ctx.fillStyle = 'rgb(' + (barHeight+100) + ',50,50)'; // Visualizer Integration
+                    ctx.fillRect(x, canvas.height-barHeight/2, barWidth, barHeight/2); // Visualizer Integration
+
+                    x += barWidth + 1; // Visualizer Integration
+                }
+            }
+
+            draw(); // Start drawing the visualizer
+        }
+
+        // Chat message handling
+        document.getElementById('sendMessage').addEventListener('click', function() {
+            const chatMessage = document.getElementById('chatInput').value;
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: chatMessage, mode: 'casual' })  // You can change mode as needed
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('chat-response').textContent = 'AI: ' + data.response;
+                return fetch('/text-to-speech', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: data.response })
+                });
+            })
+            .then(response => response.arrayBuffer())
+            .then(arrayBuffer => {
+                playAudio(arrayBuffer); // Play audio through visualizer
+            })
+            .catch(error => {
+                console.error('Error during chat or text-to-speech conversion:', error);
+                alert('Failed to process chat request.');
+            });
+        });
+
+        // Text-to-speech button handling
+        document.getElementById('generateAudio').addEventListener('click', function() {
+            const textInput = document.getElementById('textInput').value;
+            fetch('/text-to-speech', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ text: textInput })
+            })
+            .then(response => response.arrayBuffer())
+            .then(arrayBuffer => {
+                playAudio(arrayBuffer); // Play audio through visualizer
+            })
+            .catch(error => {
+                console.error('Error during text-to-speech conversion:', error);
+                alert('Failed to convert text to speech.');
+            });
+        });
+    </script>
+
+        <main id="chat-input">
+            <input type="range" min="0" max="100" value="0" id="mood-slider" />
+            <div class="mode-label" id="mode-label">Left</div>
+        </main>
+        <div class="record-button">
+            <button class="toggle-button" id="recordButton">Record</button>
+            <button class="toggle-button" id="stopButton" disabled>Stop</button>
+        </div>
+        <textarea id="userMessage" rows="4" cols="50" placeholder="Type your message here..."></textarea>
+        <button class="toggle-button" onclick="sendMessage()">Send</button>
+        <div>
+            <p id="responseText"></p>
+            <audio id="responseAudio" controls></audio>
+        </div> 
+    </div>
+    <script>
+        const checkbox = document.getElementById('checkbox');
+        checkbox.addEventListener('change', () => {
+            document.body.classList.toggle('dark-mode');
+            document.body.classList.toggle('light-mode');
+            localStorage.setItem('theme', document.body.classList.contains('light-mode') ? 'light-mode' : 'dark-mode');
+        });
+
+        document.body.classList.add(localStorage.getItem('theme') || 'dark-mode');
+
+        const slider = document.getElementById('mood-slider');
+        const modeLabel = document.getElementById('mode-label');
+
+        const updateModeLabel = (mode) => {
+            modeLabel.textContent = mode;
+            modeLabel.classList.add('show');
+            setTimeout(() => {
+                modeLabel.classList.remove('show');
+            }, 1000);
+        };
+
+        let personalityMode = 'fun';  // Default mode
+
+        slider.addEventListener('input', () => {
+            const value = slider.value;
+            if (value <= 33) {
+                slider.value = 0; // Snap to left
+                personalityMode = 'fun';
+                updateModeLabel('Fun');
+            } else if (value <= 66) {
+                slider.value = 50; // Snap to center
+                personalityMode = 'casual';
+                updateModeLabel('Casual');
+            } else {
+                slider.value = 100; // Snap to right
+                personalityMode = 'comfort';
+                updateModeLabel('Comfort');
+            }
+        });
+
+        let isRecording = false;
+        let mediaRecorder;
+        let audioChunks = [];
+
+        document.getElementById('recordButton').addEventListener('click', startRecording);
+        document.getElementById('stopButton').addEventListener('click', stopRecording);
+
+        document.getElementById('userMessage').addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+                    isRecording = true;
+                    document.getElementById('recordButton').disabled = true;
+                    document.getElementById('stopButton').disabled = false;
+
+                    mediaRecorder.addEventListener('dataavailable', event => {
+                        audioChunks.push(event.data);
+                    });
+
+                    mediaRecorder.addEventListener('stop', () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        audioChunks = [];
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audio = new Audio(audioUrl);
+                        audio.play();
+
+                        const formData = new FormData();
+                        formData.append('audio', audioBlob);
+
+                        fetch('/voice-to-text', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            document.getElementById('userMessage').value = data.transcript;
+                        })
+                        .catch(error => {
+                            console.error('Error during voice-to-text conversion:', error);
+                            alert('Failed to convert voice to text.');
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error('Error accessing the microphone:', error);
+                    alert('Could not access the microphone.');
+                });
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            isRecording = false;
+            document.getElementById('recordButton').disabled = false;
+            document.getElementById('stopButton').disabled = true;
+        }
+
+        function sendMessage() {
+            const userMessage = document.getElementById('userMessage').value;
+
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: userMessage, mode: personalityMode })  // Include personality mode
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('responseText').innerText = data.response;
+                return fetch('/text-to-speech', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: data.response })
+                });
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const audioUrl = URL.createObjectURL(blob);
+                const audioElement = document.getElementById('responseAudio');
+                audioElement.src = audioUrl;
+                audioElement.play();
+            })
+            .catch(error => {
+                console.error('Error during chat or text-to-speech conversion:', error);
+                alert('Failed to process the request.');
+            });
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amigo Voice - Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='login_styles.css') }}">  <!-- *1 -->
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Amigo Voice</h1>
+        <input type="text" id="username" placeholder="Username or Email"> <!-- *2 -->
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Sign in</button>
+        <p><a href="#">I forgot my password</a></p>
+        <button>Continue with Google</button> <!-- *3 -->
+        <button>Continue with Microsoft</button>
+        <button>Continue with Apple</button>
+        <p>New to Amigo? <a href="#">Create Account</a></p>
+        <p id="error-message" class="error"></p>
+    </div>
+    <script>
+        function login() {  // *4
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('error-message');
+
+            fetch('/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '/chat';
+                } else {
+                    errorMessage.textContent = 'Invalid username or password';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

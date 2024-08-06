@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Ignore the environment directory
 env/
 
@@ -6,3 +7,10 @@ __pycache__/
 
 # Ignore the secret configuration file
 secret.py
+=======
+# Ignore the .history folder
+.history/
+
+# Ignore the .lh folder
+.lh/
+>>>>>>> 591f3895abfbf37ef3b62a9efb84d23f7f172056
