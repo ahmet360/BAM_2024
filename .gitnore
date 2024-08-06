@@ -1,0 +1,5 @@
+# Ignore the .history folder
+.history/
+
+# Ignore the .lh folder
+.lh/
