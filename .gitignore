@@ -7,6 +7,8 @@ __pycache__/
 
 # Ignore the secret configuration file
 secret.py
+
+app.log
 =======
 # Ignore the .history folder
 .history/
