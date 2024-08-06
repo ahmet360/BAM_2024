@@ -1,29 +1,26 @@
 import requests
-import json
 from secret import AZURE_SPEECH_API_KEY, AZURE_SPEECH_REGION
 
 def convert_speech_to_text(audio_file):
-    # Azure Speech-to-Text endpoint
     url = f"https://{AZURE_SPEECH_REGION}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1"
-    
     headers = {
         "Ocp-Apim-Subscription-Key": AZURE_SPEECH_API_KEY,
-        "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",  # Ensure the audio is in PCM format with 16kHz
+        "Content-Type": "audio/wav",
+    }
+    params = {
+        "language": "en-US",
+        "format": "simple"
     }
 
-    # Send audio to Azure STT service
-    try:
-        response = requests.post(url, headers=headers, data=audio_file)
+    # Assume `audio_file` is a `FileStorage` object (from Flask's `request.files`)
+    audio_file.stream.seek(0)  # Ensure we're at the start of the file
+    response = requests.post(url, headers=headers, params=params, data=audio_file.stream)
 
-        # Raise an error if the request was not successful
-        response.raise_for_status()
-
-        # Parse the JSON response
+    if response.status_code == 200:
         result = response.json()
-        if "DisplayText" in result:
-            return result["DisplayText"]
-        else:
-            return "Could not transcribe audio."
-    except requests.exceptions.RequestException as e:
-        print(f"Request failed: {e}")
-        return "Sorry, there was an error with the speech recognition service."
+        return result.get("DisplayText", "")
+    else:
+        raise Exception(f"Request failed: {response.status_code} {response.text}")
+
+# In your Flask app route, use this function as follows:
+# transcription = convert_speech_to_text(request.files['audio'])

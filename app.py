@@ -7,7 +7,7 @@ from stt import convert_speech_to_text
 app = Flask(__name__)  # *2
 
 # Setup logging
-logging.basicConfig(level=logging.DEBUG,#logging.DEBUG,
+logging.basicConfig(level=logging.DEBUG,#log
                     format='%(asctime)s %(levelname)s %(message)s',
                     handlers=[
                         logging.FileHandler("app.log"),  # *3
@@ -42,9 +42,15 @@ def chat():
 
 @app.route('/voice-to-text', methods=['POST'])
 def voice_to_text():
-    audio_file = request.files['audio'].read()  # Read the audio file directly as bytes
-    transcription = convert_speech_to_text(audio_file)
-    return jsonify({'transcription': transcription})
+    audio_file = request.files['audio']
+    try:
+        transcription = convert_speech_to_text(audio_file)
+        return jsonify({'transcript': transcription})
+    except Exception as e:
+        logger.error(f"Error in speech-to-text: {e}")
+        return jsonify({'transcript': str(e)}), 500
+
+
 
 
 @app.route('/text-to-speech', methods=['POST'])
