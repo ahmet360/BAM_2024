@@ -40,15 +40,6 @@ def chat():
     response_message = getResponse(user_message, mode)
     return jsonify({'response': response_message})
 
-@app.route('/voice-to-text', methods=['POST'])
-def voice_to_text():
-    audio_file = request.files['audio']
-    try:
-        transcription = convert_speech_to_text(audio_file)
-        return jsonify({'transcript': transcription})
-    except Exception as e:
-        logger.error(f"Error in speech-to-text: {e}")
-        return jsonify({'transcript': str(e)}), 500
 
 
 
@@ -63,5 +54,6 @@ def text_to_speech():  # Change this to a synchronous function
         logger.error(f"Error in text-to-speech: {e}")
         return jsonify({'error': str(e)}), 500
 
-if __name__ == '__main__':
-    app.run(debug=True)  # *8
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=5000, debug=False)
+                        
